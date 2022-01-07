@@ -1,15 +1,15 @@
-#include "timeouts.h"
 #include "options.h"
+#include "timeouts.h"
 #include <alloca.h>
-#include <limits.h>
 #include <ctype.h>
+#include <errno.h>
 #include <getopt.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <errno.h>
 
 bool starts_with(const char *str, const char *pre) {
   return strncmp(pre, str, strlen(pre)) == 0;
@@ -38,7 +38,7 @@ Options parse_options(int argc, char **argv) {
     switch (c) {
     case 0:
     case 'h':
-      return (Options) {.help=true,.timeouts=NULL};
+      return (Options){.help = true, .timeouts = NULL};
     case '?':
       break;
     default:
@@ -53,10 +53,10 @@ Options parse_options(int argc, char **argv) {
 
   Timeouts *ts = parse_timeouts(timeouts, timeouts_len);
   if (!ts) {
-    return (Options) {.help=false,.timeouts=NULL};
+    return (Options){.help = false, .timeouts = NULL};
   }
 
-  return (Options) {.help=false,.timeouts=ts};
+  return (Options){.help = false, .timeouts = ts};
 }
 
 #define TIME_MAX (((time_t)1 << (sizeof(time_t) * CHAR_BIT - 2)) - 1) * 2 + 1

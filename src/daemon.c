@@ -25,7 +25,7 @@ int daemonize(char *cmd) {
   }
 
   if (setsid() < 0) {
-    return -1;
+    exit(-1);
   }
 
   signal(SIGCHLD, SIG_IGN);

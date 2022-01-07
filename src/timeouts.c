@@ -1,13 +1,11 @@
 #include "timeouts.h"
 #include "daemon.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
-inline size_t callbacks_len(Callbacks *callbacks) {
-  return callbacks->len;
-}
+inline size_t callbacks_len(Callbacks *callbacks) { return callbacks->len; }
 
 void callbacks_shrink_to_fit(Callbacks *callbacks) {
   if (!callbacks->len) {
@@ -16,7 +14,8 @@ void callbacks_shrink_to_fit(Callbacks *callbacks) {
       callbacks->cmds = NULL;
     }
   } else {
-    callbacks->cmds = realloc(callbacks->cmds, callbacks->len * sizeof(char **));
+    callbacks->cmds =
+        realloc(callbacks->cmds, callbacks->len * sizeof(char **));
   }
 
   callbacks->allocated = callbacks->len;
@@ -58,7 +57,8 @@ size_t callbacks_exec(Callbacks *callbacks) {
   return count;
 }
 
-int callbacks_inspect(Callbacks *callbacks, int (*printer)(void *, const char *, ...), void *arg) {
+int callbacks_inspect(Callbacks *callbacks,
+                      int (*printer)(void *, const char *, ...), void *arg) {
   int sum = 0;
   sum += printer(arg, "%ld: [", callbacks->timeout);
   for (size_t i = 0; i < callbacks->len; ++i) {
@@ -72,13 +72,9 @@ int callbacks_inspect(Callbacks *callbacks, int (*printer)(void *, const char *,
   return sum;
 }
 
-Timeouts *timeouts_new(void) {
-  return calloc(1, sizeof(Timeouts));
-}
+Timeouts *timeouts_new(void) { return calloc(1, sizeof(Timeouts)); }
 
-inline size_t timeouts_len(Timeouts *timeouts) {
-  return timeouts->len;
-}
+inline size_t timeouts_len(Timeouts *timeouts) { return timeouts->len; }
 
 void timeouts_shrink_to_fit(Timeouts *timeouts) {
   if (timeouts->len) {
@@ -87,7 +83,8 @@ void timeouts_shrink_to_fit(Timeouts *timeouts) {
       timeouts->callbacks = NULL;
     }
   } else {
-    timeouts->callbacks = realloc(timeouts->callbacks, timeouts->len * sizeof(Callbacks *));
+    timeouts->callbacks =
+        realloc(timeouts->callbacks, timeouts->len * sizeof(Callbacks *));
   }
   timeouts->allocated = timeouts->len;
 
@@ -113,7 +110,8 @@ void timeouts_ensure_alloc(Timeouts *timeouts, size_t new_len) {
     timeouts->allocated = 10;
   } else if (new_len > timeouts->allocated) {
     size_t new_alloc = new_len / 10 + ((new_len % 10 != 0) ? 1 : 0);
-    timeouts->callbacks = realloc(timeouts->callbacks, new_alloc * sizeof(Callbacks));
+    timeouts->callbacks =
+        realloc(timeouts->callbacks, new_alloc * sizeof(Callbacks));
     timeouts->allocated = new_alloc;
   }
 }
@@ -121,7 +119,8 @@ void timeouts_ensure_alloc(Timeouts *timeouts, size_t new_len) {
 void timeouts_insert_at(Timeouts *timeouts, size_t pos, time_t time) {
   timeouts_ensure_alloc(timeouts, timeouts->len + 1);
   if (pos < timeouts->len) {
-    memmove(timeouts->callbacks + pos + 1, timeouts->callbacks + pos, (timeouts->len - pos) * sizeof(Callbacks));
+    memmove(timeouts->callbacks + pos + 1, timeouts->callbacks + pos,
+            (timeouts->len - pos) * sizeof(Callbacks));
   } else {
     pos = timeouts->len; // force last position
   }
@@ -175,7 +174,8 @@ Callbacks *timeouts_get(Timeouts *timeouts, time_t time) {
     return NULL;
   }
   size_t p = 0, r = timeouts->len - 1;
-  if (time < timeouts->callbacks[0].timeout || time > timeouts->callbacks[r].timeout) {
+  if (time < timeouts->callbacks[0].timeout ||
+      time > timeouts->callbacks[r].timeout) {
     return NULL;
   } else {
     while (p <= r) {
@@ -195,7 +195,8 @@ Callbacks *timeouts_get(Timeouts *timeouts, time_t time) {
   }
 }
 
-int timeouts_inspect(Timeouts *timeouts, int (*printer)(void *, const char *, ...), void *arg) {
+int timeouts_inspect(Timeouts *timeouts,
+                     int (*printer)(void *, const char *, ...), void *arg) {
   int sum = 0;
   sum += printer(arg, "{");
   for (size_t i = 0; i < timeouts->len; ++i) {

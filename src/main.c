@@ -1,3 +1,5 @@
+#include "options.h"
+#include "timeouts.h"
 #include <X11/Xlib.h>
 #include <X11/extensions/sync.h>
 #include <X11/extensions/syncconst.h>
@@ -12,11 +14,9 @@
 #include <string.h>
 #include <sys/select.h>
 #include <time.h>
-#include "timeouts.h"
-#include "options.h"
 
 size_t oparse_timeouts(const char **timeouts, size_t offset, size_t len,
-                      time_t **);
+                       time_t **);
 XSyncAlarm create_monitor_alarm(Display *dpy, XSyncCounter *counter);
 bool is_fd_valid(int fd);
 void timespec_diff(struct timespec *result, struct timespec *start,
@@ -41,9 +41,11 @@ int main(int argc, char **argv) {
     code = 1;
     goto end;
   }
-
-  timeouts_inspect(opts.timeouts, (int (*)(void *, const char *, ...)) fprintf, stderr);
+#ifdef DEBUG
+  timeouts_inspect(opts.timeouts, (int (*)(void *, const char *, ...))fprintf,
+                   stderr);
   fputs("\n", stderr);
+#endif
 
   timeouts_free(opts.timeouts);
 
@@ -299,7 +301,7 @@ int sort_cmp(const void *_a, const void *_b) {
 }
 
 size_t oparse_timeouts(const char **timeouts, size_t offset, size_t len,
-                      time_t **result) {
+                       time_t **result) {
   if (len < 1) {
     *result = NULL;
     return 0;

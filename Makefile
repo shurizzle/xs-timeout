@@ -12,7 +12,7 @@ all: $(BIN)
 clangd: compile_flags.txt
 
 compile_flags.txt:
-	@echo $(CFLAGS) -I./includes $(X11_CFLAGS) | tr ' ' '\n' > compile_flags.txt
+	@(for flag in $(CFLAGS) -I./includes $(X11_CFLAGS); do echo "$$flag"; done) > compile_flags.txt
 
 %.o: %.c
 	@echo CC $@

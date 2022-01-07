@@ -32,4 +32,4 @@ deep_clean: clean
 valgrind:
 	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes -s
 
-.PHONY: clean all clangd valgrind
+.PHONY: clean deep_clean all clangd valgrind

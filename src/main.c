@@ -12,15 +12,15 @@
 #include <string.h>
 #include <sys/select.h>
 #include <time.h>
+#include "timeouts.h"
+#include "options.h"
 
-time_t now();
-size_t parse_timeouts(const char **timeouts, size_t offset, size_t len,
+size_t oparse_timeouts(const char **timeouts, size_t offset, size_t len,
                       time_t **);
 XSyncAlarm create_monitor_alarm(Display *dpy, XSyncCounter *counter);
 bool is_fd_valid(int fd);
 void timespec_diff(struct timespec *result, struct timespec *start,
                    struct timespec *stop);
-int daemonize(char *cmd);
 
 int main(int argc, char **argv) {
   int code = 0;
@@ -29,8 +29,26 @@ int main(int argc, char **argv) {
   XSyncSystemCounter *counters = NULL;
   XSyncAlarm alarm = 0;
 
+  Options opts = parse_options(argc, argv);
+
+  if (opts.help) {
+    printf("HELPS HERE\n");
+    goto end;
+  }
+
+  if (!opts.timeouts) {
+    fprintf(stderr, "ERROR: HELPS\n");
+    code = 1;
+    goto end;
+  }
+
+  timeouts_inspect(opts.timeouts, (int (*)(void *, const char *, ...)) fprintf, stderr);
+  fputs("\n", stderr);
+
+  timeouts_free(opts.timeouts);
+
   size_t timeouts_len =
-      parse_timeouts((const char **)argv, 1, argc - 1, &timeouts);
+      oparse_timeouts((const char **)argv, 1, argc - 1, &timeouts);
 #ifdef DEBUG
   fprintf(stderr, "Timeouts: [");
   for (size_t i = 0; i < timeouts_len; ++i) {
@@ -247,15 +265,9 @@ end:
   return code;
 }
 
-time_t now(void) {
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return ts.tv_sec;
-}
-
 #define TIME_MAX (((time_t)1 << (sizeof(time_t) * CHAR_BIT - 2)) - 1) * 2 + 1
 
-time_t parse_timeout(const char *timeout, int base) {
+time_t oparse_timeout(const char *timeout, int base) {
   time_t res = TIME_MAX;
   unsigned long long tmp;
   char *endptr = NULL;
@@ -286,7 +298,7 @@ int sort_cmp(const void *_a, const void *_b) {
   return a - b;
 }
 
-size_t parse_timeouts(const char **timeouts, size_t offset, size_t len,
+size_t oparse_timeouts(const char **timeouts, size_t offset, size_t len,
                       time_t **result) {
   if (len < 1) {
     *result = NULL;
@@ -297,7 +309,7 @@ size_t parse_timeouts(const char **timeouts, size_t offset, size_t len,
 
   size_t i;
   for (i = 0; i < len; ++i) {
-    time_t tmp = parse_timeout(timeouts[i + offset], 10);
+    time_t tmp = oparse_timeout(timeouts[i + offset], 10);
 
     if (tmp == TIME_MAX && errno == ERANGE) {
       goto err;

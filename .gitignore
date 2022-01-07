@@ -1,3 +1,4 @@
 /src/*.o
-/xss-timeout
+/xs-timeout
 /compile_flags.txt
+/compile_commands.json

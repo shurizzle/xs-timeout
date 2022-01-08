@@ -20,6 +20,7 @@ struct state {
 };
 
 void set_handler(int, void (*)(int));
+void sigalrm_handler(int);
 void sigcont_handler(int);
 void sigtstp_handler(int);
 void sigstop_handler(int);
@@ -30,10 +31,12 @@ struct timespec *next_timeout(struct timespec *timeout);
 
 #define VERSION "0.0.1"
 
-#define SHORT_HELP "xs-timeout [-h|-v|[<seconds>:<command>]+ [reset:<command>]*]"
+#define SHORT_HELP                                                             \
+  "xs-timeout [-h|-v|[<seconds>:<command>]+ [reset:<command>]*]"
 
-#define HELP "xs-timeout v" VERSION "\n" \
-  "\n" \
+#define HELP                                                                   \
+  "xs-timeout v" VERSION "\n"                                                  \
+  "\n"                                                                         \
   "USAGE: " SHORT_HELP
 
 int main(int argc, char **argv) {
@@ -74,6 +77,7 @@ int main(int argc, char **argv) {
   state.timeouts = opts.timeouts;
   opts.timeouts = NULL;
 
+  set_handler(SIGALRM, &sigalrm_handler);
   set_handler(SIGTSTP, &sigtstp_handler);
   set_handler(SIGSTOP, &sigstop_handler);
   set_handler(SIGCONT, &sigcont_handler);
@@ -246,5 +250,12 @@ void sigcont_handler(__attribute__((unused)) int sig) {
     state_destroy();
     exit(1);
   }
+  state.restart = true;
+}
+
+void sigalrm_handler(__attribute__((unused)) int sig) {
+#ifdef DEBUG
+  fprintf(stderr, "Restarting\n");
+#endif
   state.restart = true;
 }

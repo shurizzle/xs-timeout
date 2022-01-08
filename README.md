@@ -19,6 +19,7 @@ xs-timeout supports some signals:
 
 - SIGSTOP, SIGTSTP (^Z) will close the X11 connection and pause the program, you can continue the normal execution with a SIGCONT
 - SIGCONT will re-open the X11 connection and call resets
+- SIGALRM will restart the timers, so resets all called
 
 It can be useful if you want to implements something like caffeine/caffeinate.
 

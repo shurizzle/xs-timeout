@@ -129,22 +129,21 @@ void timeouts_insert_at(Timeouts *timeouts, size_t pos, time_t time) {
   timeouts->len++;
 }
 
-Callbacks *timeouts_get_or_create(Timeouts *timeouts, time_t time) {
+size_t timeouts_get_exact_or_next_index(Timeouts *timeouts, time_t time) {
   if (!timeouts->callbacks) {
-    timeouts_insert_at(timeouts, 0, time);
-    return &timeouts->callbacks[0];
+    return 0;
   } else {
     size_t p = 0, r = timeouts->len - 1;
 
     if (time < timeouts->callbacks[0].timeout) {
-      timeouts_insert_at(timeouts, 0, time);
+      return 0;
     } else if (time > timeouts->callbacks[r].timeout) {
-      timeouts_insert_at(timeouts, timeouts->len, time);
+      return timeouts->len;
     } else {
       while (p <= r) {
         size_t q = (p + r) / 2;
         if (timeouts->callbacks[q].timeout == time) {
-          return &timeouts->callbacks[q];
+          return q;
         }
 
         if (timeouts->callbacks[q].timeout > time) {
@@ -154,11 +153,21 @@ Callbacks *timeouts_get_or_create(Timeouts *timeouts, time_t time) {
         }
       }
 
-      timeouts_insert_at(timeouts, p, time);
+      return p;
     }
-
-    return &timeouts->callbacks[p];
   }
+}
+
+Callbacks *timeouts_get_or_create(Timeouts *timeouts, time_t time) {
+  size_t index = timeouts_get_exact_or_next_index(timeouts, time);
+  if (index < timeouts->len) {
+    if (timeouts->callbacks[index].timeout != time) {
+      timeouts_insert_at(timeouts, index, time);
+    }
+  } else {
+    timeouts_insert_at(timeouts, index, time);
+  }
+  return &timeouts->callbacks[index];
 }
 
 void timeouts_append(Timeouts *timeouts, time_t time, char *cmd) {
@@ -235,4 +244,20 @@ size_t timeouts_exec(Timeouts *timeouts, time_t from, time_t to) {
   }
 
   return count;
+}
+
+struct timespec *timeouts_next(Timeouts *timeouts, struct timespec *timeout) {
+  size_t index = timeouts_get_exact_or_next_index(timeouts, timeout->tv_sec);
+  while (index < timeouts->len &&
+         timeouts->callbacks[index].timeout <= timeout->tv_sec) {
+    index++;
+  }
+
+  if (index >= timeouts->len) {
+    return NULL;
+  } else {
+    timeout->tv_sec = timeouts->callbacks[index].timeout;
+    timeout->tv_nsec = 0;
+    return timeout;
+  }
 }

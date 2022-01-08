@@ -5,7 +5,7 @@ X11_LDFLAGS ?= $(shell pkg-config --libs x11 xext)
 
 CFLAGS += -Wall -Wextra -pedantic -pedantic-errors -std=c99 -D_POSIX_C_SOURCE=200112 -D_GNU_SOURCE
 
-OBJECTS = src/main.o src/daemon.o src/timeouts.o src/options.o
+OBJECTS = src/main.o src/daemon.o src/timeouts.o src/options.o src/idle.o
 
 all: $(BIN)
 

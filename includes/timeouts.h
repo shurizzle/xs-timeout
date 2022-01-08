@@ -23,9 +23,10 @@ void timeouts_shrink_to_fit(Timeouts *);
 void timeouts_free(Timeouts *);
 void timeouts_append(Timeouts *, time_t, char *);
 void timeouts_dup_append(Timeouts *, time_t, char *);
-Callbacks *timeouts_get(Timeouts *timeouts, time_t time);
-size_t timeouts_exec_reset(Timeouts *timeouts);
-size_t timeouts_exec(Timeouts *timeouts, time_t from, time_t to);
+Callbacks *timeouts_get(Timeouts *, time_t);
+size_t timeouts_exec_reset(Timeouts *);
+size_t timeouts_exec(Timeouts *, time_t, time_t);
+struct timespec *timeouts_next(Timeouts *, struct timespec *);
 int timeouts_inspect(Timeouts *, int (*)(void *, const char *, ...), void *);
 
 void callbacks_shrink_to_fit(Callbacks *);

@@ -29,7 +29,7 @@ clean:
 deep_clean: clean
 	@rm -rf compile_flags.txt compile_commands.json
 
-valgrind:
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes -s
+valgrind: $(BIN)
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes -s $(BIN)
 
 .PHONY: clean deep_clean all clangd valgrind

@@ -38,8 +38,6 @@ DEB = $(DEBDIR).deb
 
 CLEAN_FILES += $(DEBDIR) $(DEB)
 
-#libx11-6 libxext6
-
 deb: $(DEB)
 
 $(DEBDIR)/DEBIAN/control:

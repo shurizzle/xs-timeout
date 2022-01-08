@@ -24,13 +24,15 @@ void timeouts_free(Timeouts *);
 void timeouts_append(Timeouts *, time_t, char *);
 void timeouts_dup_append(Timeouts *, time_t, char *);
 Callbacks *timeouts_get(Timeouts *timeouts, time_t time);
-void timeouts_exec_reset(Timeouts *timeouts);
+size_t timeouts_exec_reset(Timeouts *timeouts);
+size_t timeouts_exec(Timeouts *timeouts, time_t from, time_t to);
 int timeouts_inspect(Timeouts *, int (*)(void *, const char *, ...), void *);
 
 void callbacks_shrink_to_fit(Callbacks *);
 void callbacks_dup_append(Callbacks *, char *);
 void callbacks_append(Callbacks *, char *);
 size_t callbacks_len(Callbacks *);
+size_t callbacks_exec(Callbacks *);
 int callbacks_inspect(Callbacks *, int (*)(void *, const char *, ...), void *);
 
 #endif

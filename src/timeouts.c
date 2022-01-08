@@ -45,14 +45,17 @@ void callbacks_dup_append(Callbacks *callbacks, char *cmd) {
   callbacks_append(callbacks, strdup(cmd));
 }
 
-void callbacks_exec(Callbacks *callbacks) {
-  if (!callbacks) {
-    return;
+size_t callbacks_exec(Callbacks *callbacks) {
+  size_t count = 0;
+
+  if (callbacks) {
+    for (size_t i = 0; i < callbacks->len; ++i) {
+      daemonize(callbacks->cmds[i]);
+      count++;
+    }
   }
 
-  for (size_t i = 0; i < callbacks->len; ++i) {
-    daemonize(callbacks->cmds[i]);
-  }
+  return count;
 }
 
 int callbacks_inspect(Callbacks *callbacks, int (*printer)(void *, const char *, ...), void *arg) {
@@ -206,27 +209,29 @@ int timeouts_inspect(Timeouts *timeouts, int (*printer)(void *, const char *, ..
   return 0;
 }
 
-void timeouts_exec_reset(Timeouts *timeouts) {
-  callbacks_exec(timeouts_get(timeouts, 0));
+size_t timeouts_exec_reset(Timeouts *timeouts) {
+  return callbacks_exec(timeouts_get(timeouts, 0));
 }
 
-void timeouts_exec(Timeouts *timeouts, time_t from, time_t to) {
-  if (!timeouts->callbacks) {
-    return;
+size_t timeouts_exec(Timeouts *timeouts, time_t from, time_t to) {
+  size_t count = 0;
+
+  if (timeouts->callbacks) {
+    for (size_t i = 0; i < timeouts->len; ++i) {
+      Callbacks *callbacks = &timeouts->callbacks[i];
+      if (callbacks->timeout == 0) {
+        continue;
+      }
+
+      if (callbacks->timeout > to) {
+        break;
+      }
+
+      if (callbacks->timeout > from) {
+        count += callbacks_exec(callbacks);
+      }
+    }
   }
 
-  for (size_t i = 0; i < timeouts->len; ++i) {
-    Callbacks *callbacks = &timeouts->callbacks[i];
-    if (callbacks->timeout == 0) {
-      continue;
-    }
-
-    if (callbacks->timeout > to) {
-      break;
-    }
-
-    if (callbacks->timeout > from) {
-      callbacks_exec(callbacks);
-    }
-  }
+  return count;
 }

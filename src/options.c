@@ -25,12 +25,13 @@ Options parse_options(int argc, char **argv) {
   while (1) {
     static struct option long_options[] = {
         {"help", no_argument, NULL, 0},
+        {"version", no_argument, NULL, 0},
         {0, 0, 0, 0},
     };
 
     int option_index = 0;
 
-    c = getopt_long(argc, argv, "h", long_options, &option_index);
+    c = getopt_long(argc, argv, "hv", long_options, &option_index);
 
     if (c == -1) {
       break;
@@ -38,7 +39,9 @@ Options parse_options(int argc, char **argv) {
     switch (c) {
     case 0:
     case 'h':
-      return (Options){.help = true, .timeouts = NULL};
+      return (Options){.help = true, .version = false, .timeouts = NULL};
+    case 'v':
+      return (Options){.help = false, .version = true, .timeouts = NULL};
     case '?':
       break;
     default:
@@ -53,10 +56,10 @@ Options parse_options(int argc, char **argv) {
 
   Timeouts *ts = parse_timeouts(timeouts, timeouts_len);
   if (!ts) {
-    return (Options){.help = false, .timeouts = NULL};
+    return (Options){.help = false, .version = false, .timeouts = NULL};
   }
 
-  return (Options){.help = false, .timeouts = ts};
+  return (Options){.help = false, .version = false, .timeouts = ts};
 }
 
 #define TIME_MAX (((time_t)1 << (sizeof(time_t) * CHAR_BIT - 2)) - 1) * 2 + 1

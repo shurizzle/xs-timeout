@@ -6,6 +6,7 @@
 
 typedef struct options {
   bool help;
+  bool version;
   Timeouts *timeouts;
 } Options;
 

@@ -127,7 +127,6 @@ SelectResult idle_select(Idle *idle, struct timespec *timeout) {
 #endif
 
       if (select_res < 0) {
-        fprintf(stderr, "%s\n", strerror(errno));
         return ERROR;
       }
 

@@ -28,17 +28,31 @@ void state_reset();
 void state_timeout();
 struct timespec *next_timeout(struct timespec *timeout);
 
+#define VERSION "0.0.1"
+
+#define SHORT_HELP "xs-timeout [-h|-v|[<seconds>:<command>]+ [reset:<command>]*]"
+
+#define HELP "xs-timeout v" VERSION "\n" \
+  "\n" \
+  "USAGE: " SHORT_HELP
+
 int main(int argc, char **argv) {
   int code = 0;
   Options opts = parse_options(argc, argv);
 
   if (opts.help) {
-    printf("SOME HELP HERE\n");
+    printf(HELP "\n");
+    goto end;
+  }
+
+  if (opts.version) {
+    printf(VERSION "\n");
     goto end;
   }
 
   if (!opts.timeouts) {
-    /* Errors already printed */
+    fprintf(stderr, "No timeouts found.\n\n");
+    fprintf(stderr, SHORT_HELP "\n");
     code = 1;
     goto end;
   }

@@ -2,6 +2,7 @@
 #include "options.h"
 #include "timeouts.h"
 #include <errno.h>
+#include <setjmp.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -18,6 +19,8 @@ struct state {
 } state = {
     {0, 0}, 0, NULL, NULL, false,
 };
+
+sigjmp_buf startbuf;
 
 void set_handler(int, void (*)(int));
 void sigalrm_handler(int);
@@ -77,10 +80,19 @@ int main(int argc, char **argv) {
   state.timeouts = opts.timeouts;
   opts.timeouts = NULL;
 
-  set_handler(SIGALRM, &sigalrm_handler);
-  set_handler(SIGTSTP, &sigtstp_handler);
-  set_handler(SIGSTOP, &sigstop_handler);
-  set_handler(SIGCONT, &sigcont_handler);
+  if (sigsetjmp(startbuf, 1) == 0) {
+#ifdef DEBUG
+    fprintf(stderr, "Starting\n");
+#endif
+    set_handler(SIGALRM, &sigalrm_handler);
+    set_handler(SIGTSTP, &sigtstp_handler);
+    set_handler(SIGSTOP, &sigstop_handler);
+    set_handler(SIGCONT, &sigcont_handler);
+  } else {
+#ifdef DEBUG
+    fprintf(stderr, "Restarting\n");
+#endif
+  }
 
   struct timespec timeout;
 
@@ -94,11 +106,8 @@ int main(int argc, char **argv) {
 
     switch (idle_select(state.idle, next_timeout(&timeout))) {
     case ERROR:
-      if (!(errno == EINTR && state.restart)) {
-        fprintf(stderr, "ERROR: %s\n", strerror(errno));
-        goto end;
-      }
-      break;
+      fprintf(stderr, "ERROR: %s\n", strerror(errno));
+      goto end;
     case TIMEOUT:
       state_timeout();
 #ifdef DEBUG
@@ -251,6 +260,7 @@ void sigcont_handler(__attribute__((unused)) int sig) {
     exit(1);
   }
   state.restart = true;
+  siglongjmp(startbuf, 1);
 }
 
 void sigalrm_handler(__attribute__((unused)) int sig) {
@@ -258,4 +268,5 @@ void sigalrm_handler(__attribute__((unused)) int sig) {
   fprintf(stderr, "Restarting\n");
 #endif
   state.restart = true;
+  siglongjmp(startbuf, 1);
 }

@@ -149,19 +149,16 @@ struct timespec elapsed() {
   return _elapsed;
 }
 
-size_t _state_timeout() {
-  size_t res = 0;
-  time_t next = elapsed().tv_sec;
-  if (next != state.last_timeout) {
-    res = timeouts_exec(state.timeouts, state.last_timeout, next);
-    state.last_timeout = next;
-  }
-  return res;
-}
-
 void state_timeout() {
-  while (_state_timeout())
-    ;
+  size_t res;
+  do {
+    res = 0;
+    time_t next = elapsed().tv_sec;
+    if (next != state.last_timeout) {
+      res = timeouts_exec(state.timeouts, state.last_timeout, next);
+      state.last_timeout = next;
+    }
+  } while (res);
 }
 
 void state_reset() {

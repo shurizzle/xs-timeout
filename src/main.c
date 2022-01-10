@@ -213,6 +213,7 @@ void sigalrm_handler(__attribute__((unused)) int sig) {
 #ifdef DEBUG
   fprintf(stderr, "Restarting\n");
 #endif
+  idle_reset(state.idle);
   state.restart = true;
   siglongjmp(startbuf, 1);
 }

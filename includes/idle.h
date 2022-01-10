@@ -29,6 +29,7 @@ typedef enum select_result {
 
 Idle *idle_create(void);
 SelectResult idle_wait(Idle *, uint32_t);
+void idle_reset(Idle *idle);
 void idle_close(Idle *);
 
 #endif

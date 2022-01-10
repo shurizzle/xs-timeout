@@ -1,4 +1,5 @@
 #include "idle.h"
+#include <X11/extensions/sync.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -102,7 +103,6 @@ Idle *idle_create(void) {
 
   Idle *res = malloc(sizeof(Idle));
   res->dpy = dpy;
-  res->zero_alarm = 0;
   res->event_base = event_base;
   res->error_base = error_base;
   res->base_timer = XSyncValue_to_i64(&value);
@@ -127,26 +127,35 @@ err:
   return NULL;
 }
 
-#define CHECK(x)                                                               \
-  if (!x) {                                                                    \
-    goto err;                                                                  \
-  }
-
 Status start_zero_alarm(Idle *);
 Status start_timeout_alarm(Idle *, uint32_t);
 Status start_timeout_alarm_i64(Idle *, int64_t);
 void disable_alarms(Idle *);
 void next_event(Display *, XEvent *);
 
+void idle_reset(Idle *idle) {
+  disable_alarms(idle);
+
+  XSyncValue value;
+  XSyncQueryCounter(idle->dpy, idle->idle_counter, &value);
+  idle->base_timer = XSyncValue_to_i64(&value);
+  idle->idle_state = IDLE_RESET;
+}
+
+#define CHECK(x)                                                               \
+  if (!x) {                                                                    \
+    goto err;                                                                  \
+  }
+
 SelectResult wait_reset(Idle *idle, uint32_t timeout) {
+#ifdef DEBUG
+  fprintf(stderr, "wait_reset(%d) with base %ld\n", timeout, idle->base_timer);
+#endif
 start:
   if (idle->base_timer > 1000) {
     CHECK(start_zero_alarm(idle));
-    CHECK(start_timeout_alarm_i64(idle, idle->base_timer +
-                                            ((int64_t)timeout) * 1000));
-  } else {
-    CHECK(start_timeout_alarm(idle, timeout));
   }
+  CHECK(start_timeout_alarm(idle, timeout));
 
   while (1) {
     XEvent event;
@@ -186,12 +195,7 @@ SelectResult wait_timeout(Idle *idle, uint32_t timeout) {
 #ifdef DEBUG
     fprintf(stderr, " or for timeout %u\n", timeout);
 #endif
-    if (idle->base_timer > 1000) {
-      CHECK(start_timeout_alarm_i64(idle, idle->base_timer +
-                                              ((int64_t)timeout) * 1000));
-    } else {
-      CHECK(start_timeout_alarm(idle, timeout));
-    }
+    CHECK(start_timeout_alarm(idle, timeout));
   }
 #ifdef DEBUG
   else {
@@ -229,6 +233,8 @@ err:
   return ERROR;
 }
 
+#undef CHECK
+
 SelectResult idle_wait(Idle *idle, uint32_t timeout) {
   if (idle->idle_state == IDLE_RESET) {
     return wait_reset(idle, timeout);
@@ -262,6 +268,7 @@ Status start_zero_alarm(Idle *idle) {
 
 Status start_timeout_alarm_i64(Idle *idle, int64_t timeout) {
   XSyncAlarmAttributes attrs = {0};
+  timeout += idle->base_timer;
   i64_to_XSyncValue(timeout, &attrs.trigger.wait_value);
   attrs.events = 1;
   unsigned long flags = XSyncCAValue | XSyncCAEvents;

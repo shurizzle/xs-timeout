@@ -10,11 +10,6 @@ OBJECTS = src/main.o src/daemon.o src/timeouts.o src/options.o src/idle.o
 
 all: $(BIN)
 
-clangd: compile_flags.txt
-
-compile_flags.txt:
-	@(for flag in $(CFLAGS) -I./includes $(X11_CFLAGS); do echo "$$flag"; done) > compile_flags.txt
-
 %.o: %.c
 	@echo CC $@
 	@$(CC) $(CFLAGS) -I./includes $(X11_CFLAGS) -c -o $@ $<
@@ -27,6 +22,34 @@ valgrind: $(BIN)
 	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes -s $(BIN)
 
 CLEAN_FILES := $(OBJECTS) $(BIN)
+
+CLANGD_FILES := compile_flags.txt
+
+compile_flags.txt:
+	@(for flag in $(CFLAGS) -I./includes $(X11_CFLAGS); do echo "$$flag"; done) > compile_flags.txt
+
+ifneq (,$(shell which bear 2>/dev/null))
+
+CLANGD_FILES += compile_commands.json
+
+bear: compile_commands.json
+
+compile_commands.json: clean
+	@echo BEAR
+	@CFLAGS="${CFLAGS} -DDEBUG" bear -- $(MAKE) all
+
+.PHONY: bear
+
+endif
+
+clangd: $(CLANGD_FILES)
+
+ifneq (,$(shell which cloc 2>/dev/null))
+
+cloc:
+	@cloc .
+
+endif
 
 ifneq (,$(shell which dpkg 2>/dev/null))
 

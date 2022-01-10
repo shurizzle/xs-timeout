@@ -6,6 +6,7 @@
 #include <getopt.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -62,9 +63,9 @@ Options parse_options(int argc, char **argv) {
   return (Options){.help = false, .version = false, .timeouts = ts};
 }
 
-#define TIME_MAX (((time_t)1 << (sizeof(time_t) * CHAR_BIT - 2)) - 1) * 2 + 1
+#define TIMEOUT_MAX UINT32_MAX / 1000
 
-bool _parse_timeout(char *timeout, time_t *time, char **cmd) {
+bool _parse_timeout(char *timeout, uint32_t *time, char **cmd) {
   unsigned long long tmp;
   char *endptr = NULL;
 
@@ -73,12 +74,12 @@ bool _parse_timeout(char *timeout, time_t *time, char **cmd) {
     fprintf(stderr, "'%s` is not a valid timeout\n", timeout);
     return false;
   }
-  if (tmp > TIME_MAX) {
+  if (tmp > TIMEOUT_MAX) {
     fprintf(stderr, "'%s` is not a valid timeout\n", timeout);
     return false;
   }
 
-  *time = (time_t)tmp;
+  *time = (uint32_t)tmp;
 
   if (*endptr != ':') {
     fprintf(stderr, "'%s` is not a valid timeout\n", timeout);
@@ -99,7 +100,7 @@ bool _parse_timeout(char *timeout, time_t *time, char **cmd) {
 }
 
 bool parse_timeout(Timeouts *timeouts, char *t) {
-  time_t time;
+  uint32_t time;
   char *cmd;
 
   if (starts_with(t, "reset:")) {

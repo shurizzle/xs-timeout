@@ -2,10 +2,10 @@
 #define __XS_TIMEOUT_CALLBACKS__
 
 #include <stddef.h>
-#include <time.h>
+#include <stdint.h>
 
 typedef struct callbacks {
-  time_t timeout;
+  uint32_t timeout;
   char **cmds;
   size_t len;
   size_t allocated;
@@ -21,12 +21,12 @@ Timeouts *timeouts_new(void);
 size_t timeouts_len(Timeouts *);
 void timeouts_shrink_to_fit(Timeouts *);
 void timeouts_free(Timeouts *);
-void timeouts_append(Timeouts *, time_t, char *);
-void timeouts_dup_append(Timeouts *, time_t, char *);
-Callbacks *timeouts_get(Timeouts *, time_t);
+void timeouts_append(Timeouts *, uint32_t, char *);
+void timeouts_dup_append(Timeouts *, uint32_t, char *);
+Callbacks *timeouts_get(Timeouts *, uint32_t);
 size_t timeouts_exec_reset(Timeouts *);
-size_t timeouts_exec(Timeouts *, time_t, time_t);
-struct timespec *timeouts_next(Timeouts *, struct timespec *);
+size_t timeouts_exec(Timeouts *, uint32_t, uint32_t);
+uint32_t timeouts_next(Timeouts *, uint32_t);
 int timeouts_inspect(Timeouts *, int (*)(void *, const char *, ...), void *);
 
 void callbacks_shrink_to_fit(Callbacks *);

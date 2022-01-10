@@ -116,7 +116,7 @@ void timeouts_ensure_alloc(Timeouts *timeouts, size_t new_len) {
   }
 }
 
-void timeouts_insert_at(Timeouts *timeouts, size_t pos, time_t time) {
+void timeouts_insert_at(Timeouts *timeouts, size_t pos, uint32_t time) {
   timeouts_ensure_alloc(timeouts, timeouts->len + 1);
   if (pos < timeouts->len) {
     memmove(timeouts->callbacks + pos + 1, timeouts->callbacks + pos,
@@ -129,7 +129,7 @@ void timeouts_insert_at(Timeouts *timeouts, size_t pos, time_t time) {
   timeouts->len++;
 }
 
-size_t timeouts_get_exact_or_next_index(Timeouts *timeouts, time_t time) {
+size_t timeouts_get_exact_or_next_index(Timeouts *timeouts, uint32_t time) {
   if (!timeouts->callbacks) {
     return 0;
   } else {
@@ -158,7 +158,7 @@ size_t timeouts_get_exact_or_next_index(Timeouts *timeouts, time_t time) {
   }
 }
 
-Callbacks *timeouts_get_or_create(Timeouts *timeouts, time_t time) {
+Callbacks *timeouts_get_or_create(Timeouts *timeouts, uint32_t time) {
   size_t index = timeouts_get_exact_or_next_index(timeouts, time);
   if (index < timeouts->len) {
     if (timeouts->callbacks[index].timeout != time) {
@@ -170,15 +170,15 @@ Callbacks *timeouts_get_or_create(Timeouts *timeouts, time_t time) {
   return &timeouts->callbacks[index];
 }
 
-void timeouts_append(Timeouts *timeouts, time_t time, char *cmd) {
+void timeouts_append(Timeouts *timeouts, uint32_t time, char *cmd) {
   callbacks_append(timeouts_get_or_create(timeouts, time), cmd);
 }
 
-void timeouts_dup_append(Timeouts *timeouts, time_t time, char *cmd) {
+void timeouts_dup_append(Timeouts *timeouts, uint32_t time, char *cmd) {
   callbacks_dup_append(timeouts_get_or_create(timeouts, time), cmd);
 }
 
-Callbacks *timeouts_get(Timeouts *timeouts, time_t time) {
+Callbacks *timeouts_get(Timeouts *timeouts, uint32_t time) {
   if (!timeouts->callbacks) {
     return NULL;
   }
@@ -223,7 +223,7 @@ size_t timeouts_exec_reset(Timeouts *timeouts) {
   return callbacks_exec(timeouts_get(timeouts, 0));
 }
 
-size_t timeouts_exec(Timeouts *timeouts, time_t from, time_t to) {
+size_t timeouts_exec(Timeouts *timeouts, uint32_t from, uint32_t to) {
   size_t count = 0;
 
   if (timeouts->callbacks) {
@@ -246,18 +246,16 @@ size_t timeouts_exec(Timeouts *timeouts, time_t from, time_t to) {
   return count;
 }
 
-struct timespec *timeouts_next(Timeouts *timeouts, struct timespec *timeout) {
-  size_t index = timeouts_get_exact_or_next_index(timeouts, timeout->tv_sec);
+uint32_t timeouts_next(Timeouts *timeouts, uint32_t timeout) {
+  size_t index = timeouts_get_exact_or_next_index(timeouts, timeout);
   while (index < timeouts->len &&
-         timeouts->callbacks[index].timeout <= timeout->tv_sec) {
+         timeouts->callbacks[index].timeout <= timeout) {
     index++;
   }
 
   if (index >= timeouts->len) {
-    return NULL;
+    return 0;
   } else {
-    timeout->tv_sec = timeouts->callbacks[index].timeout;
-    timeout->tv_nsec = 0;
-    return timeout;
+    return timeouts->callbacks[index].timeout;
   }
 }

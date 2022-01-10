@@ -11,13 +11,13 @@
 #include <time.h>
 
 struct state {
-  struct timespec last_unidle;
-  time_t last_timeout;
+  uint32_t prev_timeout;
+  uint32_t last_timeout;
   Timeouts *timeouts;
   Idle *idle;
   bool restart;
 } state = {
-    {0, 0}, 0, NULL, NULL, false,
+    0, 0, NULL, NULL, false,
 };
 
 sigjmp_buf startbuf;
@@ -30,7 +30,7 @@ void sigstop_handler(int);
 void state_destroy();
 void state_reset();
 void state_timeout();
-struct timespec *next_timeout(struct timespec *timeout);
+void state_step();
 
 #define VERSION "0.0.1"
 
@@ -76,7 +76,6 @@ int main(int argc, char **argv) {
     goto end;
   }
 
-  clock_gettime(CLOCK_MONOTONIC, &state.last_unidle);
   state.timeouts = opts.timeouts;
   opts.timeouts = NULL;
 
@@ -88,13 +87,14 @@ int main(int argc, char **argv) {
     set_handler(SIGTSTP, &sigtstp_handler);
     set_handler(SIGSTOP, &sigstop_handler);
     set_handler(SIGCONT, &sigcont_handler);
-  } else {
-#ifdef DEBUG
-    fprintf(stderr, "Restarting\n");
-#endif
   }
+#ifdef DEBUG
+  else {
+    fprintf(stderr, "Restarting\n");
+  }
+#endif
 
-  struct timespec timeout;
+  state.last_timeout = 0;
 
   while (1) {
     if (state.restart) {
@@ -104,9 +104,9 @@ int main(int argc, char **argv) {
 #endif
     }
 
-    switch (idle_select(state.idle, next_timeout(&timeout))) {
+    state_step();
+    switch (idle_wait(state.idle, state.last_timeout)) {
     case ERROR:
-      fprintf(stderr, "ERROR: %s\n", strerror(errno));
       goto end;
     case TIMEOUT:
       state_timeout();
@@ -128,37 +128,10 @@ end:
   return code;
 }
 
-void timespec_diff(struct timespec *result, struct timespec *a,
-                   struct timespec *b) {
-  if ((a->tv_nsec - b->tv_nsec) < 0) {
-    result->tv_sec = a->tv_sec - b->tv_sec - 1;
-    result->tv_nsec = a->tv_nsec - b->tv_nsec + 1000000000;
-  } else {
-    result->tv_sec = a->tv_sec - b->tv_sec;
-    result->tv_nsec = a->tv_nsec - b->tv_nsec;
-  }
-
-  return;
-}
-
-struct timespec elapsed() {
-  struct timespec now;
-  clock_gettime(CLOCK_MONOTONIC, &now);
-  struct timespec _elapsed;
-  timespec_diff(&_elapsed, &now, &state.last_unidle);
-  return _elapsed;
-}
-
 void state_timeout() {
-  size_t res;
-  do {
-    res = 0;
-    time_t next = elapsed().tv_sec;
-    if (next != state.last_timeout) {
-      res = timeouts_exec(state.timeouts, state.last_timeout, next);
-      state.last_timeout = next;
-    }
-  } while (res);
+  if (state.last_timeout != 0) {
+    timeouts_exec(state.timeouts, state.prev_timeout, state.last_timeout);
+  }
 }
 
 void state_reset() {
@@ -168,38 +141,14 @@ void state_reset() {
     fprintf(stderr, "RESET UNIDLE\n");
 #endif
   }
-  clock_gettime(CLOCK_MONOTONIC, &state.last_unidle);
+  state.prev_timeout = 0;
   state.last_timeout = 0;
   state.restart = false;
 }
 
-struct timespec *next_timeout(struct timespec *timeout) {
-  // let elapsed = now - last
-  // let n = next(elapsed)
-  // return NULL if !n
-  // n - elapsed
-  struct timespec _elapsed = elapsed();
-
-#ifdef DEBUG
-  fprintf(stderr, "elapsed = %ld.%ld\n", _elapsed.tv_sec, _elapsed.tv_nsec);
-#endif
-
-  struct timespec next;
-  memcpy(&next, &_elapsed, sizeof(struct timespec));
-  if (!timeouts_next(state.timeouts, &next)) {
-    return NULL;
-  }
-
-#ifdef DEBUG
-  fprintf(stderr, "next = %ld.%ld\n", next.tv_sec, next.tv_nsec);
-#endif
-
-  timespec_diff(timeout, &next, &_elapsed);
-
-#ifdef DEBUG
-  fprintf(stderr, "timeout = %ld.%ld\n", timeout->tv_sec, timeout->tv_nsec);
-#endif
-  return timeout;
+void state_step() {
+  state.prev_timeout = state.last_timeout;
+  state.last_timeout = timeouts_next(state.timeouts, state.last_timeout);
 }
 
 void state_destroy() {

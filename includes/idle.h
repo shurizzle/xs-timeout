@@ -4,7 +4,6 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/sync.h>
 #include <stdint.h>
-#include <time.h>
 
 typedef enum idle_state {
   IDLE_RESET,

@@ -1,16 +1,12 @@
 #include "options.h"
 #include "timeouts.h"
-#include <alloca.h>
 #include <ctype.h>
 #include <errno.h>
 #include <getopt.h>
 #include <limits.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 bool starts_with(const char *str, const char *pre) {
   return strncmp(pre, str, strlen(pre)) == 0;

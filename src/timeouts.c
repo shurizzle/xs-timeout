@@ -1,7 +1,6 @@
 #include "timeouts.h"
 #include "daemon.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 

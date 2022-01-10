@@ -1,13 +1,7 @@
 #include "idle.h"
-#include <X11/Xlib.h>
-#include <X11/extensions/sync.h>
-#include <X11/extensions/syncconst.h>
-#include <errno.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/select.h>
 
 XSyncAlarm create_monitor_alarm(Display *, XSyncCounter *);
 

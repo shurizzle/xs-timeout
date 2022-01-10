@@ -12,7 +12,7 @@ xs-timeout \
 ```
 
 It dim the light at 40% after 60 seconds and start betterlockscreen after 120.
-On the next user interaction (reset) it set light back to 100%.
+On the next user interaction (reset) it sets the light back to 100%.
 
 You can set all the timeouts and resets you want to, repetitions included.
 
@@ -24,7 +24,7 @@ xs-timeout supports some signals:
 - SIGCONT will re-open the X11 connection and call resets
 - SIGALRM will restart the timers, so resets are called
 
-It can be useful if you want to implements something like caffeine/caffeinate.
+They can be useful if you want to implements something like caffeine/caffeinate.
 
 ---
 

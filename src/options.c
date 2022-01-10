@@ -35,10 +35,16 @@ Options parse_options(int argc, char **argv) {
     }
     switch (c) {
     case 0:
+      if (option_index == 0) {
+        goto help;
+      } else if (option_index == 1) {
+        goto version;
+      }
+      break;
     case 'h':
-      return (Options){.help = true, .version = false, .timeouts = NULL};
+      goto help;
     case 'v':
-      return (Options){.help = false, .version = true, .timeouts = NULL};
+      goto version;
     case '?':
       break;
     default:
@@ -57,6 +63,10 @@ Options parse_options(int argc, char **argv) {
   }
 
   return (Options){.help = false, .version = false, .timeouts = ts};
+help:
+  return (Options){.help = true, .version = false, .timeouts = NULL};
+version:
+  return (Options){.help = false, .version = true, .timeouts = NULL};
 }
 
 #define TIMEOUT_MAX UINT32_MAX / 1000

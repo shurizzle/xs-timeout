@@ -1,6 +1,8 @@
 #include "idle.h"
 #include "options.h"
 #include "timeouts.h"
+#include <X11/Xlib.h>
+#include <X11/Xlibint.h>
 #include <errno.h>
 #include <setjmp.h>
 #include <signal.h>
@@ -9,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 struct state {
   uint32_t prev_timeout;
@@ -135,12 +138,10 @@ void state_timeout() {
 }
 
 void state_reset() {
-  if (state.last_timeout != 0) {
-    timeouts_exec_reset(state.timeouts);
+  timeouts_exec_reset(state.timeouts);
 #ifdef DEBUG
-    fprintf(stderr, "RESET UNIDLE\n");
+  fprintf(stderr, "RESET UNIDLE\n");
 #endif
-  }
   state.prev_timeout = 0;
   state.last_timeout = 0;
   state.restart = false;
@@ -162,7 +163,7 @@ void state_destroy() {
 
 void set_handler(int signal, void (*handler)(int)) {
   struct sigaction sa;
-  sa.sa_flags = SA_RESTART | SA_ONSTACK;
+  sa.sa_flags = SA_ONSTACK | SA_NODEFER;
   sa.sa_handler = handler;
   sigaction(signal, &sa, NULL);
 }
@@ -171,8 +172,13 @@ void sigstop_handler(__attribute__((unused)) int sig) {
 #ifdef DEBUG
   fprintf(stderr, "Stopping\n");
 #endif
+
   idle_close(state.idle);
   state.idle = NULL;
+
+#ifdef DEBUG
+  fprintf(stderr, "Stopped\n");
+#endif
 }
 
 void sigtstp_handler(__attribute__((unused)) int sig) {

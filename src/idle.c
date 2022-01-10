@@ -142,6 +142,7 @@ Status start_zero_alarm(Idle *);
 Status start_timeout_alarm(Idle *, uint32_t);
 Status start_timeout_alarm_i64(Idle *, int64_t);
 void disable_alarms(Idle *);
+void next_event(Display *, XEvent *);
 
 SelectResult wait_reset(Idle *idle, uint32_t timeout) {
 start:
@@ -155,7 +156,7 @@ start:
 
   while (1) {
     XEvent event;
-    XNextEvent(idle->dpy, &event);
+    next_event(idle->dpy, &event);
 
     if (event.type == (idle->event_base + XSyncAlarmNotify)) {
       XSyncAlarmNotifyEvent *ev = (XSyncAlarmNotifyEvent *)&event;
@@ -183,8 +184,14 @@ err:
 }
 
 SelectResult wait_timeout(Idle *idle, uint32_t timeout) {
+#ifdef DEBUG
+  fprintf(stderr, "Waiting for 0");
+#endif
   CHECK(start_zero_alarm(idle));
   if (timeout) {
+#ifdef DEBUG
+    fprintf(stderr, " or for timeout %u\n", timeout);
+#endif
     if (idle->base_timer > 1000) {
       CHECK(start_timeout_alarm_i64(idle, idle->base_timer +
                                               ((int64_t)timeout) * 1000));
@@ -192,10 +199,15 @@ SelectResult wait_timeout(Idle *idle, uint32_t timeout) {
       CHECK(start_timeout_alarm(idle, timeout));
     }
   }
+#ifdef DEBUG
+  else {
+    fprintf(stderr, "\n");
+  }
+#endif
 
   while (1) {
     XEvent event;
-    XNextEvent(idle->dpy, &event);
+    next_event(idle->dpy, &event);
 
     if (event.type == (idle->event_base + XSyncAlarmNotify)) {
       XSyncAlarmNotifyEvent *ev = (XSyncAlarmNotifyEvent *)&event;
@@ -229,6 +241,21 @@ SelectResult idle_wait(Idle *idle, uint32_t timeout) {
   } else {
     return wait_timeout(idle, timeout);
   }
+}
+
+void next_event(Display *dpy, XEvent *event) {
+  int conn = ConnectionNumber(dpy);
+
+  while (XPending(dpy) < 1) {
+    fd_set read_fds;
+    FD_ZERO(&read_fds);
+    FD_SET(conn, &read_fds);
+    pselect(conn + 1, &read_fds, NULL, NULL, NULL, NULL);
+
+    XSync(dpy, 0);
+  }
+
+  XNextEvent(dpy, event);
 }
 
 Status start_zero_alarm(Idle *idle) {
@@ -296,16 +323,27 @@ Status disable_alarm(Display *dpy, XSyncAlarm alarm) {
 void disable_alarms(Idle *idle) {
   disable_alarm(idle->dpy, idle->zero_alarm);
   disable_alarm(idle->dpy, idle->timeout_alarm);
+#ifdef DEBUG
+  fprintf(stderr, "Started sync\n");
+#endif
   XSync(idle->dpy, 1);
+#ifdef DEBUG
+  fprintf(stderr, "Stopped sync\n");
+#endif
 }
 
 void idle_close(Idle *idle) {
   if (!idle) {
     return;
   }
+
   if (idle->dpy) {
+    // disable_alarm(idle->dpy, idle->zero_alarm);
+    // disable_alarm(idle->dpy, idle->timeout_alarm);
     disable_alarms(idle);
+    fprintf(stderr, "closing display\n");
     XCloseDisplay(idle->dpy);
+    fprintf(stderr, "display closed\n");
   }
   idle->zero_alarm = 0;
   idle->timeout_alarm = 0;

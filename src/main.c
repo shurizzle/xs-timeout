@@ -1,6 +1,7 @@
 #include "idle.h"
 #include "options.h"
 #include "timeouts.h"
+#include "util.h"
 #include <errno.h>
 #include <setjmp.h>
 #include <signal.h>
@@ -54,8 +55,8 @@ int main(int argc, char **argv) {
   }
 
   if (!opts.timeouts) {
-    fprintf(stderr, "No timeouts found.\n\n");
-    fprintf(stderr, SHORT_HELP "\n");
+    eprintf("No timeouts found.\n\n");
+    eprintf(SHORT_HELP "\n");
     code = 1;
     goto end;
   }
@@ -77,28 +78,22 @@ int main(int argc, char **argv) {
   opts.timeouts = NULL;
 
   if (sigsetjmp(startbuf, 1) == 0) {
-#ifdef DEBUG
-    fprintf(stderr, "Starting\n");
-#endif
+    dprintf("Starting\n");
     set_handler(SIGALRM, &sigalrm_handler);
     set_handler(SIGTSTP, &sigtstp_handler);
     set_handler(SIGSTOP, &sigstop_handler);
     set_handler(SIGCONT, &sigcont_handler);
   }
-#ifdef DEBUG
   else {
-    fprintf(stderr, "Restarting\n");
+    dprintf("Restarting\n");
   }
-#endif
 
   state.last_timeout = 0;
 
   while (1) {
     if (state.restart) {
       state_reset();
-#ifdef DEBUG
-      fprintf(stderr, "RESET RESTART\n");
-#endif
+      dprintf("RESET RESTART\n");
     }
 
     state_step();
@@ -107,9 +102,7 @@ int main(int argc, char **argv) {
       goto end;
     case TIMEOUT:
       state_timeout();
-#ifdef DEBUG
-      fprintf(stderr, "TIMEOUT\n");
-#endif
+      dprintf("TIMEOUT\n");
       break;
     case UNIDLE:
       state_reset();
@@ -133,9 +126,7 @@ void state_timeout() {
 
 void state_reset() {
   timeouts_exec_reset(state.timeouts);
-#ifdef DEBUG
-  fprintf(stderr, "RESET UNIDLE\n");
-#endif
+  dprintf("RESET UNIDLE\n");
   state.prev_timeout = 0;
   state.last_timeout = 0;
   state.restart = false;
@@ -163,16 +154,12 @@ void set_handler(int signal, void (*handler)(int)) {
 }
 
 void sigstop_handler(__attribute__((unused)) int sig) {
-#ifdef DEBUG
-  fprintf(stderr, "Stopping\n");
-#endif
+  dprintf("Stopping\n");
 
   idle_close(state.idle);
   state.idle = NULL;
 
-#ifdef DEBUG
-  fprintf(stderr, "Stopped\n");
-#endif
+  dprintf("Stopped\n");
 }
 
 void sigtstp_handler(__attribute__((unused)) int sig) {
@@ -197,11 +184,9 @@ void sigtstp_handler(__attribute__((unused)) int sig) {
 }
 
 void sigcont_handler(__attribute__((unused)) int sig) {
-#ifdef DEBUG
-  fprintf(stderr, "Resuming\n");
-#endif
+  dprintf("Resuming\n");
   if (!(state.idle = idle_create())) {
-    fprintf(stderr, "Cannot reestabilish connection\n");
+    eprintf("Cannot reestabilish connection\n");
     state_destroy();
     exit(1);
   }
@@ -210,9 +195,7 @@ void sigcont_handler(__attribute__((unused)) int sig) {
 }
 
 void sigalrm_handler(__attribute__((unused)) int sig) {
-#ifdef DEBUG
-  fprintf(stderr, "Restarting\n");
-#endif
+  dprintf("Restarting\n");
   idle_reset(state.idle);
   state.restart = true;
   siglongjmp(startbuf, 1);

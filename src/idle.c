@@ -1,4 +1,5 @@
 #include "idle.h"
+#include "util.h"
 #include <X11/extensions/sync.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,46 +28,38 @@ Idle *idle_create(void) {
 
   dpy = XOpenDisplay(NULL);
   if (dpy == NULL) {
-    fprintf(stderr, "Cannot open display\n");
+    eprintf("Cannot open display\n");
     goto err;
   }
 
   int major = 1, minor = 0;
   if (!XSyncInitialize(dpy, &major, &minor)) {
-    fprintf(stderr, "Your server doesn't support SYNC extension\n");
+    eprintf("Your server doesn't support SYNC extension\n");
     goto err;
   }
 
-#ifdef DEBUG
-  fprintf(stderr, "XSync version: %d.%d\n", major, minor);
-#endif
+  dprintf("XSync version: %d.%d\n", major, minor);
 
   int event_base = 0, error_base = 0;
   if (!XSyncQueryExtension(dpy, &event_base, &error_base)) {
-    fprintf(stderr, "Cannot query SYNC extension\n");
+    eprintf("Cannot query SYNC extension\n");
     goto err;
   }
 
-#ifdef DEBUG
-  fprintf(stderr, "XSync events: %d, errors: %d\n", event_base, error_base);
-#endif
+  dprintf("XSync events: %d, errors: %d\n", event_base, error_base);
 
   int counters_len = 0;
   if (!(counters = XSyncListSystemCounters(dpy, &counters_len))) {
-    fprintf(stderr, "Cannot retrieve the system counters list\n");
+    eprintf("Cannot retrieve the system counters list\n");
     goto err;
   }
 
   XSyncCounter counter = 0;
-#ifdef DEBUG
-  fprintf(stderr, "Counters:\n");
-#endif
+  dprintf("Counters:\n");
   for (int i = 0; i < counters_len; ++i) {
     XSyncSystemCounter c = counters[i];
 
-#ifdef DEBUG
-    fprintf(stderr, "  %s\n", c.name);
-#endif
+    dprintf("  %s\n", c.name);
 
     if (strcmp(c.name, "IDLETIME") == 0) {
       counter = c.counter;
@@ -75,7 +68,7 @@ Idle *idle_create(void) {
   }
 
   if (!counter) {
-    fprintf(stderr, "Cannot find IDLETIME counter\n");
+    eprintf("Cannot find IDLETIME counter\n");
     goto err;
   }
 
@@ -88,17 +81,17 @@ Idle *idle_create(void) {
   }
 
   if (XSyncValueIsNegative(value)) {
-    fprintf(stderr, "Counter has an invalid value.\n");
+    eprintf("Counter has an invalid value.\n");
     goto err;
   }
 
   if (!(zero_alarm = create_zero_alarm(dpy, &counter))) {
-    fprintf(stderr, "Cannot create alarm\n");
+    eprintf("Cannot create alarm\n");
     goto err;
   }
 
   if (!(timeout_alarm = create_timeout_alarm(dpy, &counter))) {
-    fprintf(stderr, "Cannot create alarm\n");
+    eprintf("Cannot create alarm\n");
     goto err;
   }
 
@@ -149,9 +142,7 @@ void idle_reset(Idle *idle) {
   }
 
 SelectResult wait_reset(Idle *idle, uint32_t timeout) {
-#ifdef DEBUG
-  fprintf(stderr, "wait_reset(%d) with base %ld\n", timeout, idle->base_timer);
-#endif
+  dprintf("wait_reset(%d) with base %ld\n", timeout, idle->base_timer);
 start:
   if (idle->base_timer > 1000) {
     CHECK(start_zero_alarm(idle));
@@ -164,10 +155,8 @@ start:
 
     if (event.type == (idle->event_base + XSyncAlarmNotify)) {
       XSyncAlarmNotifyEvent *ev = (XSyncAlarmNotifyEvent *)&event;
-#ifdef DEBUG
-      fprintf(stderr, "Got alarm %ld (%ld, %ld)\n", ev->alarm, idle->zero_alarm,
+      dprintf("Got alarm %ld (%ld, %ld)\n", ev->alarm, idle->zero_alarm,
               idle->timeout_alarm);
-#endif
 
       if (ev->alarm == idle->zero_alarm) {
         idle->base_timer = 0;
@@ -188,21 +177,15 @@ err:
 }
 
 SelectResult wait_timeout(Idle *idle, uint32_t timeout) {
-#ifdef DEBUG
-  fprintf(stderr, "Waiting for 0");
-#endif
+  dprintf("Waiting for 0");
   CHECK(start_zero_alarm(idle));
   if (timeout) {
-#ifdef DEBUG
-    fprintf(stderr, " or for timeout %u\n", timeout);
-#endif
+    dprintf(" or for timeout %u\n", timeout);
     CHECK(start_timeout_alarm(idle, timeout));
   }
-#ifdef DEBUG
   else {
-    fprintf(stderr, "\n");
+    dprintf("\n");
   }
-#endif
 
   while (1) {
     XEvent event;
@@ -210,10 +193,8 @@ SelectResult wait_timeout(Idle *idle, uint32_t timeout) {
 
     if (event.type == (idle->event_base + XSyncAlarmNotify)) {
       XSyncAlarmNotifyEvent *ev = (XSyncAlarmNotifyEvent *)&event;
-#ifdef DEBUG
-      fprintf(stderr, "Got alarm %ld (%ld, %ld)\n", ev->alarm, idle->zero_alarm,
+      dprintf("Got alarm %ld (%ld, %ld)\n", ev->alarm, idle->zero_alarm,
               idle->timeout_alarm);
-#endif
 
       if (ev->alarm == idle->zero_alarm) {
         idle->base_timer = 0;
@@ -325,13 +306,9 @@ Status disable_alarm(Display *dpy, XSyncAlarm alarm) {
 void disable_alarms(Idle *idle) {
   disable_alarm(idle->dpy, idle->zero_alarm);
   disable_alarm(idle->dpy, idle->timeout_alarm);
-#ifdef DEBUG
-  fprintf(stderr, "Started sync\n");
-#endif
+  dprintf("Started sync\n");
   XSync(idle->dpy, 1);
-#ifdef DEBUG
-  fprintf(stderr, "Stopped sync\n");
-#endif
+  dprintf("Stopped sync\n");
 }
 
 void idle_close(Idle *idle) {
@@ -343,9 +320,9 @@ void idle_close(Idle *idle) {
     // disable_alarm(idle->dpy, idle->zero_alarm);
     // disable_alarm(idle->dpy, idle->timeout_alarm);
     disable_alarms(idle);
-    fprintf(stderr, "closing display\n");
+    eprintf("closing display\n");
     XCloseDisplay(idle->dpy);
-    fprintf(stderr, "display closed\n");
+    eprintf("display closed\n");
   }
   idle->zero_alarm = 0;
   idle->timeout_alarm = 0;

@@ -1,5 +1,6 @@
 #include "options.h"
 #include "timeouts.h"
+#include "util.h"
 #include <ctype.h>
 #include <errno.h>
 #include <getopt.h>
@@ -78,18 +79,18 @@ bool _parse_timeout(char *timeout, uint32_t *time, char **cmd) {
 
   tmp = strtoull(timeout, &endptr, 10);
   if (tmp == ULLONG_MAX && errno == ERANGE) {
-    fprintf(stderr, "'%s` is not a valid timeout\n", timeout);
+    eprintf("'%s` is not a valid timeout\n", timeout);
     return false;
   }
   if (tmp > TIMEOUT_MAX) {
-    fprintf(stderr, "'%s` is not a valid timeout\n", timeout);
+    eprintf("'%s` is not a valid timeout\n", timeout);
     return false;
   }
 
   *time = (uint32_t)tmp;
 
   if (*endptr != ':') {
-    fprintf(stderr, "'%s` is not a valid timeout\n", timeout);
+    eprintf("'%s` is not a valid timeout\n", timeout);
     return false;
   }
   endptr++;
@@ -99,7 +100,7 @@ bool _parse_timeout(char *timeout, uint32_t *time, char **cmd) {
     endptr++;
   }
   if (!*endptr) {
-    fprintf(stderr, "'%s` is not a valid timeout\n", timeout);
+    eprintf("'%s` is not a valid timeout\n", timeout);
     return false;
   }
 
@@ -119,12 +120,12 @@ bool parse_timeout(Timeouts *timeouts, char *t) {
       endptr++;
     }
     if (!*endptr) {
-      fprintf(stderr, "'%s` is not a valid reset\n", t);
+      eprintf("'%s` is not a valid reset\n", t);
       return false;
     }
   } else {
     if (!_parse_timeout(t, &time, &cmd)) {
-      fprintf(stderr, "'%s` is not a valid timeout\n", t);
+      eprintf("'%s` is not a valid timeout\n", t);
       return false;
     }
   }

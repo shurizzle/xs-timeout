@@ -8,7 +8,7 @@
 int daemonize(char *cmd) {
   pid_t pid;
 
-  pid = fork();
+  pid = vfork();
 
   if (pid < 0) {
     return pid;
@@ -20,7 +20,7 @@ int daemonize(char *cmd) {
     if (res < 0) {
       return res;
     }
-    return status;
+    return WEXITSTATUS(status);
   }
 
   if (setsid() < 0) {

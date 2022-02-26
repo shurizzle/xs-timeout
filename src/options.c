@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <alloca.h>
 
 bool starts_with(const char *str, const char *pre) {
   return strncmp(pre, str, strlen(pre)) == 0;
